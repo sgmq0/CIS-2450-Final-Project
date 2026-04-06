@@ -1,0 +1,316 @@
+/* Global stylesheet for CIS 2450 Dashboard */
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body,
+html {
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+	background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+	min-height: 100vh;
+}
+
+#hello-banner {
+	background: #d4edda;
+	border: 1px solid #c3e6cb;
+	color: #155724;
+	padding: 12px 16px;
+	margin: 0 0 20px 0;
+	border-radius: 6px;
+	font-weight: 500;
+}
+
+.header-bar {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
+	padding: 30px 20px;
+	text-align: center;
+	margin: 0;
+	font-size: 32px;
+	font-weight: 700;
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.header-bar+div {
+	text-align: center;
+	color: #555;
+	margin-top: 8px;
+	font-size: 16px;
+	margin-bottom: 20px;
+}
+
+.container {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 20px;
+}
+
+.card {
+	background: white;
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 15px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	transition: all 0.3s ease;
+}
+
+.card:hover {
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-button-group {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	justify-content: center;
+	align-items: center;
+}
+
+.modal-button-group button {
+	margin: 0;
+	white-space: nowrap;
+}
+
+.subheader {
+	font-size: 18px;
+	font-weight: 600;
+	color: #333;
+	margin-bottom: 10px;
+}
+
+button {
+	padding: 10px 20px;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 14px;
+	font-weight: 600;
+	transition: all 0.2s ease;
+	background: #667eea;
+	color: white;
+}
+
+button:hover {
+	background: #5568d3;
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+button:active {
+	transform: translateY(0);
+}
+
+input[type='text'],
+input[type='number'],
+select {
+	padding: 8px 12px;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	font-size: 14px;
+}
+
+input[type='text']:focus,
+input[type='number']:focus,
+select:focus {
+	outline: none;
+	border-color: #667eea;
+	box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.rc-slider {
+	margin: 15px 0;
+}
+
+label {
+	display: block;
+	font-weight: 600;
+	color: #333;
+	margin-bottom: 8px;
+}
+
+h2,
+h3,
+h4 {
+	color: #333;
+	margin-bottom: 12px;
+}
+
+h3 {
+	font-size: 18px;
+}
+
+h4 {
+	font-size: 16px;
+}
+
+ul {
+	list-style: none;
+	padding-left: 0;
+}
+
+li {
+	padding: 6px 0;
+	color: #555;
+}
+
+li:before {
+	content: '→ ';
+	color: #667eea;
+	font-weight: bold;
+	margin-right: 8px;
+}
+
+#custom-message-output {
+	color: #667eea;
+	font-weight: 600;
+	padding: 10px;
+	background: #f0f3ff;
+	border-radius: 4px;
+	margin-top: 10px;
+}
+
+/* Modal styling */
+
+.modal-backdrop {
+	position: fixed !important;
+	top: 0 !important;
+	left: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+	background: rgba(0, 0, 0, 0.6) !important;
+	z-index: 999 !important;
+	pointer-events: auto !important;
+}
+
+.modal-backdrop[style*="display: none"] {
+	display: none !important;
+}
+
+.modal-container {
+	position: fixed !important;
+	top: 50% !important;
+	left: 50% !important;
+	transform: translate(-50%, -50%) !important;
+	z-index: 1000 !important;
+	pointer-events: auto !important;
+	max-height: 90vh !important;
+	overflow-y: auto !important;
+	border-radius: 12px !important;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3) !important;
+	background: white !important;
+	padding: 0 !important;
+}
+
+.modal-container[style*="display: none"] {
+	display: none !important;
+}
+
+/* Keep Dash dropdown menus from extending beyond modals (make the menu scroll) */
+#user-favorites-modal .dropdown-in-modal .Select-menu-outer,
+#user-favorites-modal .dropdown-in-modal .Select-menu,
+#user-favorites-modal .dropdown-in-modal .Select__menu,
+#user-favorites-modal .dropdown-in-modal .Select__menu-list {
+	max-height: 130px !important;
+	overflow-y: auto !important;
+}
+
+/* Same dropdown containment for Genre & Artist modal */
+#genre-artist-modal .dropdown-in-modal .Select-menu-outer,
+#genre-artist-modal .dropdown-in-modal .Select-menu,
+#genre-artist-modal .dropdown-in-modal .Select__menu,
+#genre-artist-modal .dropdown-in-modal .Select__menu-list {
+	max-height: 130px !important;
+	overflow-y: auto !important;
+}
+
+/* Same dropdown containment for Recommendations modal */
+#recommendations-modal .dropdown-in-modal .Select-menu-outer,
+#recommendations-modal .dropdown-in-modal .Select-menu,
+#recommendations-modal .dropdown-in-modal .Select__menu,
+#recommendations-modal .dropdown-in-modal .Select__menu-list {
+	max-height: 130px !important;
+	overflow-y: auto !important;
+}
+
+/* Same dropdown containment for Friend Artists modal */
+#friend-artists-modal .dropdown-in-modal .Select-menu-outer,
+#friend-artists-modal .dropdown-in-modal .Select-menu,
+#friend-artists-modal .dropdown-in-modal .Select__menu,
+#friend-artists-modal .dropdown-in-modal .Select__menu-list {
+	max-height: 130px !important;
+	overflow-y: auto !important;
+}
+
+#friends-popular-songs-modal .dropdown-in-modal .Select-menu-outer,
+#friends-popular-songs-modal .dropdown-in-modal .Select-menu,
+#friends-popular-songs-modal .dropdown-in-modal .Select__menu,
+#friends-popular-songs-modal .dropdown-in-modal .Select__menu-list {
+	max-height: 130px !important;
+	overflow-y: auto !important;
+}
+
+#friends-top-genres-modal .dropdown-in-modal .Select-menu-outer,
+#friends-top-genres-modal .dropdown-in-modal .Select-menu,
+#friends-top-genres-modal .dropdown-in-modal .Select__menu,
+#friends-top-genres-modal .dropdown-in-modal .Select__menu-list {
+	max-height: 130px !important;
+	overflow-y: auto !important;
+}
+
+#top-songs-per-genre-modal .dropdown-in-modal .Select-menu-outer,
+#top-songs-per-genre-modal .dropdown-in-modal .Select-menu,
+#top-songs-per-genre-modal .dropdown-in-modal .Select__menu,
+#top-songs-per-genre-modal .dropdown-in-modal .Select__menu-list {
+	max-height: 130px !important;
+	overflow-y: auto !important;
+}
+
+/* DataTable styling */
+
+.dash-table-container {
+	background: white;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.dash-spreadsheet {
+	border: 1px solid #e0e0e0;
+	border-radius: 4px;
+}
+
+.dash-spreadsheet thead {
+	background: #f5f5f5;
+}
+
+.dash-spreadsheet th {
+	padding: 10px;
+	font-weight: 600;
+	color: #333;
+	border-bottom: 2px solid #e0e0e0;
+}
+
+.dash-spreadsheet td {
+	padding: 10px;
+	border-bottom: 1px solid #f0f0f0;
+}
+
+.dash-spreadsheet tbody tr:hover {
+	background: #f9f9f9;
+}
+
+/* Responsive columns for users modal */
+@media (max-width: 900px) {
+
+	.two-col-left,
+	.two-col-right {
+		width: 100% !important;
+		display: block !important;
+	}
+
+	.two-col-left {
+		margin-bottom: 16px;
+	}
+}
