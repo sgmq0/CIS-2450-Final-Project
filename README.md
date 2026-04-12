@@ -10,26 +10,6 @@ We plan to study the correlation between the users’ preferred audiobook genres
 
 Given that we are working with music-related data, we will be using the Spotify and iTunes APIs as data sources. We may also supplement the data with an API from a book database if needed.
 
-
-## Development Steps
-1. Clone this repository.
-2. In the root folder, do `uv sync` to install all the dependencies. This will create the `.venv` folder.
-3. Set the `OPENAI_API_KEY` environment variable:
-```
-echo "OPENAI_API_KEY=your-api-key-here" > .env
-```
-The api key can be found on EdStem.
-
-## Python Backend Setup
-
-This project now includes a lightweight **FastAPI backend** in the `backend/` folder.
-
-## What it does
-- Searches **Spotify artists** and returns genre metadata
-- Searches **iTunes podcasts** and returns podcast category metadata
-- Searches **Google Books** and returns book / audiobook-style category metadata
-- Computes a **media taste profile** from selected items
-
 ## Install dependencies
 From the project root:
 
@@ -45,6 +25,7 @@ cp .env.example .env
 ```
 
 Then fill in:
+- `OPENAI_API_KEY`
 - `SPOTIFY_CLIENT_ID`
 - `SPOTIFY_CLIENT_SECRET`
 - optionally `GOOGLE_BOOKS_API_KEY`
@@ -59,6 +40,28 @@ Then open the API docs at:
 ```bash
 http://127.0.0.1:8000/docs
 ```
+## Run the frontend
+In another terminal window,
+
+```bash
+cd frontend
+npm run dev
+```
+
+The frontend can be viewed at:
+```bash
+http://localhost:5173/
+```
+
+# Python Backend Setup
+
+This project now includes a lightweight **FastAPI backend** in the `backend/` folder.
+
+## What it does
+- Searches **Spotify artists** and returns genre metadata
+- Searches **iTunes podcasts** and returns podcast category metadata
+- Searches **Google Books** and returns book / audiobook-style category metadata
+- Computes a **media taste profile** from selected items
 
 ## Available endpoints
 - `GET /health`
@@ -76,4 +79,6 @@ The taste score combines three things:
 
 These are weighted together to produce a single score that reflects how cohesive, broad, and well-rounded your overall media taste is.
 
+# React Frontend
 
+This project also includes a **React** frontend to allow the user to smoothly interact with the API.
