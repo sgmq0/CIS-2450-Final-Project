@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from dotenv import load_dotenv
+load_dotenv()
+import os
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -57,4 +61,5 @@ async def audiobooks(q: str = Query(..., min_length=1), limit: int = Query(5, ge
 
 @app.post("/api/taste/profile", response_model=TasteProfileResponse)
 def taste_profile(payload: TasteProfileRequest) -> TasteProfileResponse:
-    return build_taste_profile(payload)
+    api_key = os.getenv("OPENAI_API_KEY")
+    return build_taste_profile(payload, openai_api_key=api_key)

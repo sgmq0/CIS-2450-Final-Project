@@ -49,11 +49,13 @@ class SpotifyService:
 
         items = []
         for artist in data.get("artists", {}).get("items", []):
+            genres = artist.get("genres", [])
+
             items.append(
                 MediaItem(
                     id=artist["id"],
                     name=artist["name"],
-                    genres=artist.get("genres", []),
+                    genres=genres,
                     source="spotify",
                     metadata={
                         "popularity": artist.get("popularity"),
@@ -61,4 +63,5 @@ class SpotifyService:
                     },
                 )
             )
+
         return SearchResponse(query=query, items=items)

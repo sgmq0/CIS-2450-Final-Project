@@ -1,5 +1,6 @@
 from __future__ import annotations
-
+import openai
+import json
 
 def normalize_genre(raw: str) -> str:
     genre = raw.lower().strip().replace("&", "and")
@@ -163,3 +164,36 @@ def normalize_genre(raw: str) -> str:
 def normalize_genres(genres: list[str]) -> list[str]:
     cleaned = [normalize_genre(g) for g in genres if g and g.strip()]
     return sorted(set(cleaned))
+
+
+def normalize_genres_with_llm(genres: list[str], openai_api_key: str) -> list[str]:
+    client = openai.OpenAI(api_key=openai_api_key)
+    
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": """You are a genre normalization assistant. 
+                Given a list of genres, normalize them into broad canonical categories.
+                Use these target categories where possible:
+                pop, rock, hip-hop, rnb, country, jazz, classical, electronic,
+                indie, news, comedy, business, education, history, health,
+                science, technology, society-culture, self-help, psychology,
+                biography, fiction, fantasy, romance, mystery, thriller.
+                
+                Return ONLY a JSON array of normalized genre strings, one per input genre.
+                Preserve the order. No explanation, no markdown, just the JSON array."""
+            },
+            {
+                "role": "user", 
+                "content": f"Normalize these genres: {json.dumps(genres)}"
+            }
+        ],
+        temperature=0
+    )
+    
+    raw = response.choices[0].message.content.strip()
+    normalized = json.loads(raw)
+    return sorted(set(normalized))
+

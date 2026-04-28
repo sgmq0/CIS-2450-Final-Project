@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import Counter
 
 from backend.models import PairwiseOverlap, TasteProfileRequest, TasteProfileResponse
-from backend.api.normalization import normalize_genres
+from backend.api.normalization import normalize_genres, normalize_genres_with_llm
 
 
 def _collect_genres(items) -> list[str]:
@@ -42,10 +42,10 @@ def _interpret(overall: int, consistency: int, diversity: int) -> str:
     return "This user’s media taste is still diffuse or lightly sampled, so the profile suggests experimentation more than a single clear pattern."
 
 
-def build_taste_profile(payload: TasteProfileRequest) -> TasteProfileResponse:
-    music_genres = normalize_genres(_collect_genres(payload.music_items))
-    podcast_genres = normalize_genres(_collect_genres(payload.podcast_items))
-    audiobook_genres = normalize_genres(_collect_genres(payload.audiobook_items))
+def build_taste_profile(payload: TasteProfileRequest, openai_api_key: str) -> TasteProfileResponse:
+    music_genres = normalize_genres_with_llm(_collect_genres(payload.music_items), openai_api_key)
+    podcast_genres = normalize_genres_with_llm(_collect_genres(payload.podcast_items), openai_api_key)
+    audiobook_genres = normalize_genres_with_llm(_collect_genres(payload.audiobook_items), openai_api_key)
 
     music_set = set(music_genres)
     podcast_set = set(podcast_genres)

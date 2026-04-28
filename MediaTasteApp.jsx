@@ -379,6 +379,7 @@ function TastePanel({ baskets, onRemove, onClear }) {
 
   async function compute() {
     if (total === 0) return;
+    
     setStatus("loading"); setError(""); setProfile(null);
     try {
       const res = await fetch(`${BASE}/api/taste/profile`, {
@@ -390,6 +391,7 @@ function TastePanel({ baskets, onRemove, onClear }) {
           audiobook_items: baskets.audiobook,
         })
       });
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setProfile(data); setStatus("done");
