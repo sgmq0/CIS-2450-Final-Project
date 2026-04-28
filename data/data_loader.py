@@ -39,7 +39,7 @@ def load_social_dataset() -> pl.DataFrame:
         )
         shutil.copy(os.path.join(path), PATH)
 
-    df = pl.read_csv(PATH, separator="\t", has_header=False, skip_rows=4)
+    df = pl.read_csv(PATH, separator="\t", has_header=False, skip_rows=4, encoding="utf8-lossy", infer_schema_length=0, truncate_ragged_lines=True)
 
     if len(df.columns) >= 2:
         df = df.rename({df.columns[0]: "src", df.columns[1]: "dst"})

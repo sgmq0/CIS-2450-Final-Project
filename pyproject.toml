@@ -22,9 +22,11 @@ dependencies = [
     "penngrader-client>=0.5.13",
     "plotly[express]>=6.5.2",
     "polars>=1.37.1",
+    "pyarrow>=24.0.0",
     "pydantic>=2.10.0",
     "pydantic-settings>=2.13.1",
     "python-dotenv>=1.2.1",
+    "scikit-learn>=1.8.0",
     "seaborn>=0.13.2",
     "uvicorn>=0.44.0",
 ]
