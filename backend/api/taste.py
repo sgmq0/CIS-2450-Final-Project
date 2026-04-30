@@ -42,7 +42,7 @@ def _interpret(overall: int, consistency: int, diversity: int) -> str:
     return "This user’s media taste is still diffuse or lightly sampled, so the profile suggests experimentation more than a single clear pattern."
 
 
-def build_taste_profile(payload: TasteProfileRequest, openai_api_key: str) -> TasteProfileResponse:
+def build_taste_profile(payload: TasteProfileRequest, openai_api_key: str) -> TasteProfileResponse:        
     music_genres = normalize_genres_with_llm(_collect_genres(payload.music_items), openai_api_key)
     podcast_genres = normalize_genres_with_llm(_collect_genres(payload.podcast_items), openai_api_key)
     audiobook_genres = normalize_genres_with_llm(_collect_genres(payload.audiobook_items), openai_api_key)

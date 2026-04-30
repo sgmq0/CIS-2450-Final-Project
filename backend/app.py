@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import get_settings
-from backend.models import SearchResponse, TasteProfileRequest, TasteProfileResponse, TasteModelRequest, AnalysisRequest
+from backend.models import MediaItem, SearchResponse, TasteProfileRequest, TasteProfileResponse, TasteModelRequest, AnalysisRequest
 from backend.api.books import BooksService
 from backend.api.itunes import ItunesService
 from backend.api.spotify import SpotifyService
@@ -18,6 +18,8 @@ from backend.api.modeling import run_feature_engineering, run_ensemble, run_feat
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+
+import requests
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name)
@@ -40,10 +42,44 @@ def health() -> dict:
     return {"status": "ok", "environment": settings.app_env}
 
 
+def get_genres_from_musicbrainz(artist_name: str, limit: int) -> list[MediaItem]:
+    search_res = requests.get(
+        "https://musicbrainz.org/ws/2/artist/",
+        params={"query": artist_name, "fmt": "json", "limit": limit, "inc": "tags"},
+        headers={"User-Agent": "MediaTasteApp/1.0 (feng.r018@gmail.com)"}
+    ).json()
+
+    if not search_res.get("artists"):
+        return []
+
+    items = []
+    for artist in search_res["artists"][:limit]:
+        tags = sorted(artist.get("tags", []), key=lambda t: -t["count"])
+        items.append(MediaItem(
+            id=artist["id"],
+            name=artist["name"],
+            source="musicbrainz",
+            genres=[t["name"] for t in tags[:8]],
+            creator=None,
+            metadata={"score": artist.get("score", 0)}
+        ))
+
+    return items
+
+
 @app.get("/api/spotify/artists", response_model=SearchResponse)
 async def spotify_artists(q: str = Query(..., min_length=1), limit: int = Query(5, ge=1, le=20)) -> SearchResponse:
     try:
-        return await spotify_service.search_artists(q, limit)
+
+        results = get_genres_from_musicbrainz(q, limit)
+
+        return SearchResponse(
+            query=q,
+            items=[
+                MediaItem(**item) if isinstance(item, dict) else item
+                for item in results
+            ]
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

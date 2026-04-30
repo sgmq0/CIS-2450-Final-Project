@@ -3,13 +3,13 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 const BASE = "http://127.0.0.1:8000";
 
 const SOURCE_COLORS = {
-  spotify: { bg: "rgba(29,185,84,0.12)", text: "#1db954", label: "Spotify" },
+  musicbrainz: { bg: "rgba(29,185,84,0.12)", text: "#1db954", label: "musicbrainz" },
   itunes: { bg: "rgba(252,60,68,0.12)", text: "#fc3c44", label: "iTunes" },
   google_books: { bg: "rgba(66,133,244,0.12)", text: "#4285f4", label: "Books" },
 };
 
 const BASKET_TYPES = [
-  { key: "music", label: "Music", icon: "♪", source: "spotify" },
+  { key: "music", label: "Music", icon: "♪", source: "musicbrainz" },
   { key: "podcast", label: "Podcasts", icon: "◉", source: "itunes" },
   { key: "audiobook", label: "Audiobooks", icon: "▣", source: "google_books" },
 ];
