@@ -708,6 +708,340 @@ function TastePanel({ baskets, onRemove, onClear }) {
   );
 }
 
+
+function AnalysisPanel({ baskets }) {
+  const [results, setResults] = useState({
+    "feature-engineering": null,
+    "ensemble": null,
+    "feature-importance": null,
+  });
+  const [loading, setLoading] = useState({});
+  const [errors, setErrors] = useState({});
+
+  const total = Object.values(baskets).reduce((s, a) => s + a.length, 0);
+
+  const payload = {
+    music_items: baskets.music,
+    podcast_items: baskets.podcast,
+    audiobook_items: baskets.audiobook,
+  };
+
+  async function runAnalysis(key) {
+    setLoading(l => ({ ...l, [key]: true }));
+    setErrors(e => ({ ...e, [key]: null }));
+    try {
+      const res = await fetch(`${BASE}/api/taste/${key}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setResults(r => ({ ...r, [key]: data }));
+    } catch (e) {
+      setErrors(err => ({ ...err, [key]: e.message }));
+    } finally {
+      setLoading(l => ({ ...l, [key]: false }));
+    }
+  }
+
+  async function runAll() {
+    await Promise.all([
+      runAnalysis("feature-engineering"),
+      runAnalysis("ensemble"),
+      runAnalysis("feature-importance"),
+    ]);
+  }
+
+  const sectionStyle = {
+    border: "0.5px solid var(--color-border-tertiary)",
+    borderRadius: "var(--border-radius-md)",
+    overflow: "hidden",
+    marginBottom: 16,
+  };
+
+  const headerStyle = {
+    padding: "10px 14px",
+    background: "var(--color-background-secondary)",
+    borderBottom: "0.5px solid var(--color-border-tertiary)",
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+  };
+
+  function ErrorBox({ msg }) {
+    return (
+      <div style={{
+        margin: "12px 16px", padding: "10px 14px", fontSize: 13,
+        border: "0.5px solid var(--color-border-danger)",
+        borderRadius: "var(--border-radius-md)",
+        color: "var(--color-text-danger)",
+        background: "var(--color-background-danger)",
+      }}>{msg}</div>
+    );
+  }
+
+  const fe  = results["feature-engineering"];
+  const ens = results["ensemble"];
+  const fi  = results["feature-importance"];
+
+  return (
+    <div>
+      {total === 0 && (
+        <div style={{ textAlign: "center", padding: "32px 0", fontSize: 13, color: "var(--color-text-tertiary)" }}>
+          Add items to your baskets first, then run analysis here.
+        </div>
+      )}
+
+      {total > 0 && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+          <button onClick={runAll} disabled={Object.values(loading).some(Boolean)}>
+            {Object.values(loading).some(Boolean) ? "Running…" : "Run all analyses"}
+          </button>
+        </div>
+      )}
+
+      {/* feature engineering */}
+      <div style={sectionStyle}>
+        <div style={headerStyle}>
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>Feature Engineering</span>
+            <span style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginLeft: 8 }}>
+              genre interaction terms
+            </span>
+          </div>
+          <button onClick={() => runAnalysis("feature-engineering")}
+            disabled={loading["feature-engineering"] || total === 0}
+            style={{ fontSize: 11 }}>
+            {loading["feature-engineering"] ? "Running…" : "Run"}
+          </button>
+        </div>
+
+        {errors["feature-engineering"] && <ErrorBox msg={errors["feature-engineering"]} />}
+
+        {fe && (
+          <div style={{ padding: "14px 16px" }}>
+            {/* feature count summary */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
+              {[
+                { label: "Original genres",    val: fe.original_feature_count },
+                { label: "Interaction terms",  val: fe.interaction_feature_count },
+                { label: "Total features",     val: fe.total_feature_count },
+              ].map(({ label, val }) => (
+                <div key={label} style={{
+                  textAlign: "center", padding: "12px 8px",
+                  background: "var(--color-background-secondary)",
+                  border: "0.5px solid var(--color-border-tertiary)",
+                  borderRadius: "var(--border-radius-md)"
+                }}>
+                  <div style={{ fontSize: 20, fontWeight: 500 }}>{val}</div>
+                  <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 4 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* accuracy comparison */}
+            {fe.accuracy_original != null && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 8, letterSpacing: 1 }}>
+                  ACCURACY: ORIGINAL VS ENGINEERED FEATURES
+                </div>
+                {[
+                  { label: "Original features",    val: fe.accuracy_original },
+                  { label: "Engineered features",  val: fe.accuracy_engineered },
+                ].map(({ label, val }) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, flex: 1 }}>{label}</span>
+                    <div style={{ width: 100, height: 5, borderRadius: 3, background: "var(--color-border-tertiary)" }}>
+                      <div style={{
+                        width: `${Math.round(val * 100)}%`, height: "100%", borderRadius: 3,
+                        background: "var(--color-text-info)", transition: "width 0.6s ease"
+                      }} />
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 500, width: 40, textAlign: "right" }}>
+                      {Math.round(val * 100)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* top interactions */}
+            {fe.top_interactions.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 8, letterSpacing: 1 }}>
+                  TOP GENRE INTERACTIONS
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {fe.top_interactions.map(({ name, artist_count }) => (
+                    <span key={name} style={{
+                      fontSize: 11, padding: "3px 9px", borderRadius: 4,
+                      background: "var(--color-background-info)",
+                      color: "var(--color-text-info)",
+                      border: "0.5px solid var(--color-border-info)",
+                    }}>
+                      {name}
+                      <span style={{ marginLeft: 5, opacity: 0.7 }}>×{artist_count}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {fe.note && (
+              <div style={{ fontSize: 12, color: "var(--color-text-tertiary)", fontStyle: "italic" }}>{fe.note}</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ensemble */}
+      <div style={sectionStyle}>
+        <div style={headerStyle}>
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>Ensemble Models</span>
+            <span style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginLeft: 8 }}>
+              RF vs GradientBoosting vs LogReg vs Voting
+            </span>
+          </div>
+          <button onClick={() => runAnalysis("ensemble")}
+            disabled={loading["ensemble"] || total === 0}
+            style={{ fontSize: 11 }}>
+            {loading["ensemble"] ? "Running…" : "Run"}
+          </button>
+        </div>
+
+        {errors["ensemble"] && <ErrorBox msg={errors["ensemble"]} />}
+
+        {ens && (
+          <div style={{ padding: "14px 16px" }}>
+            <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 10, letterSpacing: 1 }}>
+              CV ACCURACY ({ens.n_items} items, {ens.n_clusters} clusters)
+            </div>
+            {[...ens.model_comparison]
+              .sort((a, b) => b.mean_accuracy - a.mean_accuracy)
+              .map(({ model, mean_accuracy, std }) => {
+                const isBest = model === ens.best_model;
+                const pct = Math.round(mean_accuracy * 100);
+                return (
+                  <div key={model} style={{
+                    display: "flex", alignItems: "center", gap: 10, marginBottom: 8,
+                    padding: isBest ? "6px 10px" : "0",
+                    background: isBest ? "var(--color-background-success)" : "transparent",
+                    border: isBest ? "0.5px solid var(--color-border-success)" : "none",
+                    borderRadius: isBest ? "var(--border-radius-md)" : 0,
+                  }}>
+                    <span style={{ fontSize: 12, flex: 1, fontWeight: isBest ? 500 : 400 }}>
+                      {isBest ? "★ " : ""}{model}
+                    </span>
+                    <div style={{ width: 100, height: 5, borderRadius: 3, background: "var(--color-border-tertiary)" }}>
+                      <div style={{
+                        width: `${pct}%`, height: "100%", borderRadius: 3,
+                        background: isBest ? "var(--color-text-success)" : "var(--color-text-info)",
+                        transition: "width 0.6s ease"
+                      }} />
+                    </div>
+                    <span style={{ fontSize: 12, width: 55, textAlign: "right", fontWeight: isBest ? 500 : 400 }}>
+                      {pct}% ±{Math.round(std * 100)}
+                    </span>
+                  </div>
+                );
+              })}
+          </div>
+        )}
+      </div>
+
+      {/* feature importance */}
+      <div style={sectionStyle}>
+        <div style={headerStyle}>
+          <div>
+            <span style={{ fontSize: 13, fontWeight: 500 }}>Feature Importance + PCA</span>
+            <span style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginLeft: 8 }}>
+              RF Gini importances + variance explained
+            </span>
+          </div>
+          <button onClick={() => runAnalysis("feature-importance")}
+            disabled={loading["feature-importance"] || total === 0}
+            style={{ fontSize: 11 }}>
+            {loading["feature-importance"] ? "Running…" : "Run"}
+          </button>
+        </div>
+
+        {errors["feature-importance"] && <ErrorBox msg={errors["feature-importance"]} />}
+
+        {fi && (
+          <div style={{ padding: "14px 16px" }}>
+            {/* PCA summary */}
+            <div style={{
+              padding: "10px 14px", marginBottom: 16,
+              background: "var(--color-background-secondary)",
+              border: "0.5px solid var(--color-border-tertiary)",
+              borderRadius: "var(--border-radius-md)",
+              fontSize: 13, lineHeight: 1.8
+            }}>
+              PCA reduces <strong>{fi.total_genre_features}</strong> genre features
+              down to <strong>{fi.pca_components_for_90pct_variance}</strong> components
+              to explain 90% of variance.
+              <br />
+              Accuracy with all features: <strong>{Math.round(fi.accuracy_full_features * 100)}%</strong>
+              {" · "}
+              With PCA reduction: <strong>{Math.round(fi.accuracy_pca_reduced * 100)}%</strong>
+            </div>
+
+            {/* top genres by importance */}
+            <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 10, letterSpacing: 1 }}>
+              TOP GENRES BY RF IMPORTANCE
+            </div>
+            {fi.top_genres_by_importance.map(({ genre, importance }) => {
+              const maxImp = fi.top_genres_by_importance[0].importance;
+              const pct = Math.round((importance / maxImp) * 100);
+              return (
+                <div key={genre} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, flex: 1 }}>{genre}</span>
+                  <div style={{ width: 100, height: 5, borderRadius: 3, background: "var(--color-border-tertiary)" }}>
+                    <div style={{
+                      width: `${pct}%`, height: "100%", borderRadius: 3,
+                      background: "var(--color-text-info)", transition: "width 0.6s ease"
+                    }} />
+                  </div>
+                  <span style={{ fontSize: 12, width: 48, textAlign: "right", color: "var(--color-text-secondary)" }}>
+                    {importance.toFixed(3)}
+                  </span>
+                </div>
+              );
+            })}
+
+            {/* PCA variance by component */}
+            {fi.variance_by_component.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 10, letterSpacing: 1 }}>
+                  PCA VARIANCE EXPLAINED PER COMPONENT
+                </div>
+                {fi.variance_by_component.map(({ component, variance_explained }) => {
+                  const pct = Math.round(variance_explained * 100);
+                  return (
+                    <div key={component} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 5 }}>
+                      <span style={{ fontSize: 12, width: 24, color: "var(--color-text-tertiary)" }}>PC{component}</span>
+                      <div style={{ flex: 1, height: 5, borderRadius: 3, background: "var(--color-border-tertiary)" }}>
+                        <div style={{
+                          width: `${Math.min(pct * 3, 100)}%`, height: "100%", borderRadius: 3,
+                          background: "var(--color-text-warning)", transition: "width 0.6s ease"
+                        }} />
+                      </div>
+                      <span style={{ fontSize: 12, width: 36, textAlign: "right", color: "var(--color-text-secondary)" }}>
+                        {pct}%
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function HealthBanner() {
   const [status, setStatus] = useState("checking");
   const [env, setEnv] = useState("");
@@ -754,6 +1088,7 @@ const TABS = [
   { id: "itunes", label: "Podcasts", endpoint: "/api/itunes/podcasts", placeholder: "Crime Junkie", basketType: "podcast" },
   { id: "books", label: "Books", endpoint: "/api/books/audiobooks", placeholder: "Analysis and Design of Algorithms", basketType: "audiobook" },
   { id: "taste", label: "Taste Profile", endpoint: null },
+  { id: "analysis", label: "Analysis", endpoint: null }, 
 ];
 
 
@@ -829,7 +1164,7 @@ export default function App() {
       </div>
 
       {/* tab content */}
-      {TABS.filter(t => t.id !== "taste").map(tab => (
+      {TABS.filter(t => t.id !== "taste" && t.id !== "analysis").map(tab => (
         activeTab === tab.id && (
           <SearchPanel
             key={tab.id}
@@ -845,6 +1180,10 @@ export default function App() {
 
       {activeTab === "taste" && (
         <TastePanel baskets={baskets} onRemove={removeFromBasket} onClear={clearBasket} />
+      )}
+
+      {activeTab === "analysis" && (
+        <AnalysisPanel baskets={baskets} />
       )}
     </div>
   );

@@ -52,3 +52,11 @@ class TasteModelRequest(BaseModel):
     podcast_items: list[TasteItem] = []
     audiobook_items: list[TasteItem] = []
 
+
+class AnalysisRequest(BaseModel):
+    music_items: list[TasteItem] = []
+    podcast_items: list[TasteItem] = []
+    audiobook_items: list[TasteItem] = []
+
+    def all_items(self):
+        return [i.model_dump() for i in self.music_items + self.podcast_items + self.audiobook_items]

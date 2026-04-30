@@ -8,11 +8,12 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import get_settings
-from backend.models import SearchResponse, TasteProfileRequest, TasteProfileResponse, TasteModelRequest
+from backend.models import SearchResponse, TasteProfileRequest, TasteProfileResponse, TasteModelRequest, AnalysisRequest
 from backend.api.books import BooksService
 from backend.api.itunes import ItunesService
 from backend.api.spotify import SpotifyService
 from backend.api.taste import build_taste_profile
+from backend.api.modeling import run_feature_engineering, run_ensemble, run_feature_importance
 
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -124,3 +125,18 @@ def model_taste(body: TasteModelRequest):
         "bridge_genres": bridge_genres,
         "genre_diversity": genre_diversity,
     }
+
+
+@app.post("/api/taste/feature-engineering")
+def feature_engineering(body: AnalysisRequest):
+    return run_feature_engineering(body.all_items())
+
+
+@app.post("/api/taste/ensemble")
+def ensemble(body: AnalysisRequest):
+    return run_ensemble(body.all_items())
+
+
+@app.post("/api/taste/feature-importance")
+def feature_importance(body: AnalysisRequest):
+    return run_feature_importance(body.all_items())
