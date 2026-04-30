@@ -372,6 +372,7 @@ function SearchPanel({ endpoint, label, placeholder, basketType, baskets, onAdd 
 
 function TastePanel({ baskets, onRemove, onClear }) {
   const [profile, setProfile] = useState(null);
+  const [model, setModel] = useState(null);
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
 
@@ -379,24 +380,50 @@ function TastePanel({ baskets, onRemove, onClear }) {
 
   async function compute() {
     if (total === 0) return;
-    setStatus("loading"); setError(""); setProfile(null);
+    setStatus("loading"); setError(""); setProfile(null); setModel(null);
+
+    const payload = {
+      music_items: baskets.music,
+      podcast_items: baskets.podcast,
+      audiobook_items: baskets.audiobook,
+    };
+
     try {
-      const res = await fetch(`${BASE}/api/taste/profile`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          music_items: baskets.music,
-          podcast_items: baskets.podcast,
-          audiobook_items: baskets.audiobook,
-        })
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setProfile(data); setStatus("done");
+      // fire both calls in parallel
+      const [profileRes, modelRes] = await Promise.all([
+        fetch(`${BASE}/api/taste/profile`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }),
+        fetch(`${BASE}/api/taste/model`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }),
+      ]);
+
+      if (!profileRes.ok) throw new Error(`Profile HTTP ${profileRes.status}`);
+      if (!modelRes.ok) throw new Error(`Model HTTP ${modelRes.status}`);
+
+      const [profileData, modelData] = await Promise.all([
+        profileRes.json(),
+        modelRes.json(),
+      ]);
+
+      setProfile(profileData);
+      setModel(modelData);
+      setStatus("done");
     } catch (e) {
       setError(e.message); setStatus("error");
     }
   }
+
+  // build a lookup: item name -> fit score, for badge rendering
+  const fitScoreMap = useMemo(() => {
+    if (!model?.fit_scores) return {};
+    return Object.fromEntries(model.fit_scores.map(f => [f.name, f.score]));
+  }, [model]);
 
   const scoreColors = [
     "var(--color-text-info)",
@@ -407,6 +434,7 @@ function TastePanel({ baskets, onRemove, onClear }) {
 
   return (
     <div>
+      {/* baskets with fit score badges */}
       {BASKET_TYPES.map(({ key, label, icon }) => (
         <div key={key} style={{
           marginBottom: 16,
@@ -436,10 +464,32 @@ function TastePanel({ baskets, onRemove, onClear }) {
 
           {baskets[key].length > 0 && (
             <div style={{ padding: "10px 14px", display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {baskets[key].map(item => (
-                <Tag key={item.id} label={item.name}
-                  onRemove={() => onRemove(key, item.id)} />
-              ))}
+              {baskets[key].map(item => {
+                const score = fitScoreMap[item.name];
+                const isOutlier = model?.outliers?.some(o => o.name === item.name);
+                return (
+                  <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <Tag label={item.name} onRemove={() => onRemove(key, item.id)} />
+                    {/* fit score badge: only shown after model runs */}
+                    {score != null && (
+                      <span style={{
+                        fontSize: 10, padding: "2px 6px", borderRadius: 3, fontWeight: 500,
+                        background: isOutlier
+                          ? "var(--color-background-warning)"
+                          : "var(--color-background-success)",
+                        color: isOutlier
+                          ? "var(--color-text-warning)"
+                          : "var(--color-text-success)",
+                        border: isOutlier
+                          ? "0.5px solid var(--color-border-warning)"
+                          : "0.5px solid var(--color-border-success)",
+                      }}>
+                        {isOutlier ? "⚠ " : ""}{Math.round(score * 100)}% fit
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -455,7 +505,9 @@ function TastePanel({ baskets, onRemove, onClear }) {
         <button onClick={compute} disabled={total === 0 || status === "loading"}>
           {status === "loading" ? "Computing…" : "Compute profile"}
         </button>
-        <button onClick={() => { onClear("all"); setProfile(null); }}>Clear all</button>
+        <button onClick={() => { onClear("all"); setProfile(null); setModel(null); }}>
+          Clear all
+        </button>
       </div>
 
       {status === "error" && (
@@ -469,6 +521,132 @@ function TastePanel({ baskets, onRemove, onClear }) {
         }}>{error}</div>
       )}
 
+      {/* model insights */}
+      {model && !model.error && (
+        <div style={{
+          marginBottom: 28,
+          border: "0.5px solid var(--color-border-tertiary)",
+          borderRadius: "var(--border-radius-md)",
+          overflow: "hidden"
+        }}>
+          <div style={{
+            padding: "10px 14px",
+            background: "var(--color-background-secondary)",
+            borderBottom: "0.5px solid var(--color-border-tertiary)",
+            fontSize: 11, fontWeight: 500,
+            color: "var(--color-text-secondary)", letterSpacing: 1
+          }}>
+            GENRE MODEL
+          </div>
+
+          <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 18 }}>
+
+            {/* fit score list */}
+            <div>
+              <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 8, letterSpacing: 1 }}>
+                ITEM FIT SCORES
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {[...model.fit_scores]
+                  .sort((a, b) => b.score - a.score)
+                  .map(({ name, source, score }) => {
+                    const isOutlier = model.outliers.some(o => o.name === name);
+                    const pct = Math.round(score * 100);
+                    return (
+                      <div key={name} style={{
+                        display: "flex", alignItems: "center", gap: 10
+                      }}>
+                        <SourceBadge source={source} />
+                        <span style={{ fontSize: 13, flex: 1 }}>{name}</span>
+                        {/* progress bar */}
+                        <div style={{
+                          width: 80, height: 5, borderRadius: 3,
+                          background: "var(--color-border-tertiary)", flexShrink: 0
+                        }}>
+                          <div style={{
+                            width: `${pct}%`, height: "100%", borderRadius: 3,
+                            background: isOutlier
+                              ? "var(--color-text-warning)"
+                              : "var(--color-text-success)",
+                            transition: "width 0.6s ease"
+                          }} />
+                        </div>
+                        <span style={{
+                          fontSize: 12, width: 36, textAlign: "right", flexShrink: 0,
+                          color: isOutlier ? "var(--color-text-warning)" : "var(--color-text-success)",
+                          fontWeight: 500
+                        }}>{pct}%</span>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+
+            {/* outliers */}
+            {model.outliers.length > 0 && (
+              <div style={{
+                padding: "10px 14px",
+                background: "var(--color-background-warning)",
+                border: "0.5px solid var(--color-border-warning)",
+                borderRadius: "var(--border-radius-md)",
+                fontSize: 13, color: "var(--color-text-warning)", lineHeight: 1.6
+              }}>
+                <strong>Genre outliers:</strong>{" "}
+                {model.outliers.map(o => o.name).join(" and ")} have genres that diverge
+                most from your overall taste profile.
+              </div>
+            )}
+
+            {/* bridge genres */}
+            {model.bridge_genres.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 8, letterSpacing: 1 }}>
+                  BRIDGE GENRES (appear across all 3 media)
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {model.bridge_genres.map(g => (
+                    <span key={g} style={{
+                      fontSize: 12, padding: "3px 9px", borderRadius: 4,
+                      background: "var(--color-background-info)",
+                      color: "var(--color-text-info)",
+                      border: "0.5px solid var(--color-border-info)",
+                      fontWeight: 500
+                    }}>{g}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* genre diversity meter */}
+            <div>
+              <div style={{
+                display: "flex", justifyContent: "space-between",
+                fontSize: 11, color: "var(--color-text-tertiary)",
+                marginBottom: 6, letterSpacing: 1
+              }}>
+                <span>GENRE DIVERSITY</span>
+                <span style={{ color: "var(--color-text-primary)", fontWeight: 500 }}>
+                  {Math.round(model.genre_diversity * 100)}%
+                </span>
+              </div>
+              <div style={{
+                height: 6, borderRadius: 3,
+                background: "var(--color-border-tertiary)"
+              }}>
+                <div style={{
+                  width: `${Math.round(model.genre_diversity * 100)}%`,
+                  height: "100%", borderRadius: 3,
+                  background: "var(--color-text-info)",
+                  transition: "width 0.8s ease"
+                }} />
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* profile section */}
       {profile && (
         <div>
           {/* scores */}

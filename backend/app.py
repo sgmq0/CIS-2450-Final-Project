@@ -8,11 +8,15 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend.config import get_settings
-from backend.models import SearchResponse, TasteProfileRequest, TasteProfileResponse
+from backend.models import SearchResponse, TasteProfileRequest, TasteProfileResponse, TasteModelRequest
 from backend.api.books import BooksService
 from backend.api.itunes import ItunesService
 from backend.api.spotify import SpotifyService
 from backend.api.taste import build_taste_profile
+
+from sklearn.preprocessing import MultiLabelBinarizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name)
@@ -63,3 +67,60 @@ async def audiobooks(q: str = Query(..., min_length=1), limit: int = Query(5, ge
 def taste_profile(payload: TasteProfileRequest) -> TasteProfileResponse:
     api_key = os.getenv("OPENAI_API_KEY")
     return build_taste_profile(payload, openai_api_key=api_key)
+
+
+@app.post("/api/taste/model")
+def model_taste(body: TasteModelRequest):
+    all_items = body.music_items + body.podcast_items + body.audiobook_items
+
+    if len(all_items) < 2:
+        return {"error": "Add at least 2 items to model your taste."}
+
+    # binary genre matrix, like notebook's MultiLabelBinarizer (feature engineering)
+    mlb = MultiLabelBinarizer()
+    genre_matrix = mlb.fit_transform([item.genres for item in all_items])
+    genre_classes = mlb.classes_
+
+    # cosine similarity instead of k means because we're running it on way less data points
+    sim_matrix = cosine_similarity(genre_matrix)
+
+    # each item's fit score = avg similarity to all other items
+    fit_scores = sim_matrix.mean(axis=1).tolist()
+
+    # outliers = lowest fit score
+    sorted_by_fit = sorted(
+        zip([i.name for i in all_items], [i.source for i in all_items], fit_scores),
+        key=lambda x: x[2]
+    )
+    outliers = [{"name": n, "source": s, "score": round(sc, 3)}
+                for n, s, sc in sorted_by_fit[:2]]
+
+    # top genres across full profile
+    genre_freq = genre_matrix.sum(axis=0)
+    top_genre_indices = np.argsort(genre_freq)[::-1][:8]
+    top_genres = [genre_classes[i] for i in top_genre_indices]
+
+    # bridge genres-- appear in all 3 sources
+    def genres_for(items): 
+        return set(g for item in items for g in item.genres)
+
+    music_genres = genres_for(body.music_items)
+    podcast_genres = genres_for(body.podcast_items)
+    audiobook_genres = genres_for(body.audiobook_items)
+    bridge_genres = list(music_genres & podcast_genres & audiobook_genres)
+
+    # genre diversity -> fraction of genres that appear at least once
+    genre_diversity = round(
+        float(np.count_nonzero(genre_freq)) / max(len(genre_classes), 1), 3
+    )
+
+    return {
+        "fit_scores": [
+            {"name": all_items[i].name, "source": all_items[i].source, "score": round(fit_scores[i], 3)}
+            for i in range(len(all_items))
+        ],
+        "outliers": outliers,
+        "top_genres": top_genres,
+        "bridge_genres": bridge_genres,
+        "genre_diversity": genre_diversity,
+    }

@@ -38,3 +38,17 @@ class TasteProfileResponse(BaseModel):
     overall_score: int
     pairwise_overlap: PairwiseOverlap
     interpretation: str
+
+
+class TasteItem(BaseModel):
+    id: str
+    name: str
+    source: str          # "spotify" | "itunes" | "google_books"
+    genres: list[str]
+
+
+class TasteModelRequest(BaseModel):
+    music_items: list[TasteItem] = []
+    podcast_items: list[TasteItem] = []
+    audiobook_items: list[TasteItem] = []
+
